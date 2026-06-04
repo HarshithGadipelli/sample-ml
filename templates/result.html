@@ -1,0 +1,55 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<section class="card result-card">
+  <h2>{{ result.college_name }}</h2>
+  <div class="result-grid">
+    <div class="result-pill">Category: {{ result.category }}</div>
+    <div class="result-pill">Overall Rank: {{ result.overall_rank if result.overall_rank is not none else "Estimated" }}</div>
+    <div class="result-pill">State Rank: {{ result.state_rank if result.state_rank is not none else "Estimated" }}</div>
+    <div class="result-pill">Final Score: {{ "%.2f"|format(result.final_score) }}</div>
+    <div class="result-pill">Confidence: {{ "%.2f"|format(result.confidence_score) }}%</div>
+    <div class="result-pill">NAAC: {{ result.naac_like_grade }}</div>
+  </div>
+
+  <div class="score-cards">
+    <div class="score-box"><span>Learning</span><strong>{{ result.learning_env_score }}</strong></div>
+    <div class="score-box"><span>Student Life</span><strong>{{ result.student_life_score }}</strong></div>
+    <div class="score-box"><span>Academic</span><strong>{{ result.academic_score }}</strong></div>
+    <div class="score-box"><span>Outcomes</span><strong>{{ result.outcome_score }}</strong></div>
+    <div class="score-box"><span>Infra</span><strong>{{ result.infrastructure_score }}</strong></div>
+    <div class="score-box"><span>Trust</span><strong>{{ result.trust_score }}</strong></div>
+  </div>
+
+  <div class="result-grid meta">
+    <div><b>State:</b> {{ result.state }}</div>
+    <div><b>Type:</b> {{ result.college_type }}</div>
+    <div><b>NIRF-like:</b> {{ result.nirf_like_score }}</div>
+    <div><b>NBA-like:</b> {{ result.nba_like_score }}</div>
+    <div><b>Values:</b> {{ result.values_alignment_score }}</div>
+    <div><b>Title-fit:</b> {{ result.title_fit_score }}</div>
+  </div>
+
+  <section class="card inner">
+    <h3>Remarks</h3>
+    <p>{{ result.remarks }}</p>
+  </section>
+
+  <section class="card inner">
+    <h3>Suggestions</h3>
+    <ul class="list">
+      {% for s in result.suggestions %}
+      <li>{{ s }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card inner">
+    <h3>What to improve for rank 1 in the state</h3>
+    {% if result.rank_1_benchmark %}
+    <p>Current top state benchmark: <b>{{ result.rank_1_benchmark.college_name }}</b> with score <b>{{ "%.2f"|format(result.rank_1_benchmark.final_score) }}</b>.</p>
+    {% endif %}
+    <p>To move toward rank 1, improve the lowest-scoring areas first and keep semester surveys genuine, frequent, and verified.</p>
+  </section>
+</section>
+{% endblock %}

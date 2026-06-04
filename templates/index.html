@@ -1,0 +1,170 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<section class="hero card">
+  <div class="hero-copy">
+    <h1>Find college rank, category, and improvement path</h1>
+    <p>Search an existing college or predict a new one using compact quality inputs. The model combines semester surveys, infrastructure, student life, official signals, and trust checks.</p>
+    {% if metrics %}
+    <div class="metric-row">
+      <div class="metric">
+        <div class="metric-label">Validation MAE</div>
+        <div class="metric-value">{{ "%.2f"|format(metrics.mae) }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Validation R²</div>
+        <div class="metric-value">{{ "%.3f"|format(metrics.r2) }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Training Rows</div>
+        <div class="metric-value">{{ metrics.train_rows }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="hero-art">
+    <div class="leaf-card">🌿 Study environment</div>
+    <div class="leaf-card">📘 Practical learning</div>
+    <div class="leaf-card">🎓 Career outcomes</div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <section class="card form-card">
+    <h2>Search existing college</h2>
+    <form action="{{ url_for('search') }}" method="post" class="form">
+      <label>College name</label>
+      <input type="text" name="college_name" placeholder="Type college name..." required>
+      <button type="submit">Find rank</button>
+    </form>
+  </section>
+
+  <section class="card form-card">
+    <h2>Predict new college</h2>
+    <form action="{{ url_for('predict_new') }}" method="post" class="form form-grid">
+      <label>College name</label>
+      <input type="text" name="college_name" placeholder="New college name" required>
+
+      <label>State</label>
+      <input type="text" name="state" placeholder="Telangana">
+
+      <label>District</label>
+      <input type="text" name="district" placeholder="Hyderabad">
+
+      <label>College type</label>
+      <select name="college_type">
+        <option>Engineering</option>
+        <option>Degree</option>
+        <option>Autonomous</option>
+        <option>University</option>
+        <option>Arts</option>
+        <option>Management</option>
+      </select>
+
+      <label>Peer group</label>
+      <input type="text" name="peer_group" placeholder="Engineering">
+
+      <label>Campus area (acres)</label>
+      <input type="number" step="0.1" name="campus_area_acres" value="10">
+
+      <label>Greenery score</label>
+      <input type="number" step="0.1" name="greenery_score" value="70">
+
+      <label>Classroom score</label>
+      <input type="number" step="0.1" name="classroom_score" value="70">
+
+      <label>Labs score</label>
+      <input type="number" step="0.1" name="labs_score" value="70">
+
+      <label>Library score</label>
+      <input type="number" step="0.1" name="library_score" value="70">
+
+      <label>Internet score</label>
+      <input type="number" step="0.1" name="internet_score" value="70">
+
+      <label>Hostel score</label>
+      <input type="number" step="0.1" name="hostel_score" value="70">
+
+      <label>Sports score</label>
+      <input type="number" step="0.1" name="sports_score" value="70">
+
+      <label>Faculty score</label>
+      <input type="number" step="0.1" name="faculty_score" value="70">
+
+      <label>Practical score</label>
+      <input type="number" step="0.1" name="practical_score" value="70">
+
+      <label>Mentoring score</label>
+      <input type="number" step="0.1" name="mentoring_score" value="70">
+
+      <label>Placements score</label>
+      <input type="number" step="0.1" name="placements_score" value="70">
+
+      <label>Research score</label>
+      <input type="number" step="0.1" name="research_score" value="70">
+
+      <label>Values score</label>
+      <input type="number" step="0.1" name="values_score" value="70">
+
+      <label>NIRF score</label>
+      <input type="number" step="0.1" name="nirf_score" value="50">
+
+      <label>NAAC CGPA</label>
+      <input type="number" step="0.01" name="naac_cgpa" value="2.5">
+
+      <label>NBA score</label>
+      <input type="number" step="0.1" name="nba_score" value="50">
+
+      <label>Survey learning env</label>
+      <input type="number" step="0.1" name="survey_learning_env" value="70">
+
+      <label>Survey student life</label>
+      <input type="number" step="0.1" name="survey_student_life" value="70">
+
+      <label>Survey academic quality</label>
+      <input type="number" step="0.1" name="survey_academic_quality" value="70">
+
+      <label>Survey outcomes</label>
+      <input type="number" step="0.1" name="survey_outcomes" value="70">
+
+      <label>Survey trust</label>
+      <input type="number" step="0.1" name="survey_trust" value="70">
+
+      <label>Genuine ratio</label>
+      <input type="number" step="0.01" name="genuine_ratio" value="0.5">
+
+      <label>Survey count</label>
+      <input type="number" step="1" name="survey_count" value="0">
+
+      <label>Trusted survey count</label>
+      <input type="number" step="1" name="trusted_survey_count" value="0">
+
+      <label>Survey months</label>
+      <input type="number" step="1" name="survey_months" value="0">
+
+      <button type="submit">Predict new college</button>
+    </form>
+  </section>
+</section>
+
+<section class="card">
+  <h2>Top ranked colleges in sample data</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>State</th><th>Category</th><th>Score</th></tr>
+      </thead>
+      <tbody>
+        {% for row in colleges %}
+        <tr>
+          <td>{{ row.college_name }}</td>
+          <td>{{ row.state }}</td>
+          <td>{{ row.category }}</td>
+          <td>{{ "%.2f"|format(row.predicted_score) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h2>Admin panel</h2>
+  <p>Upload updated CSVs and retrain the model from real data.</p>
+
+  <div class="grid-2">
+    <form class="form card inner" action="{{ url_for('upload_static') }}" method="post" enctype="multipart/form-data">
+      <h3>Upload static colleges CSV</h3>
+      <input type="file" name="static_file" accept=".csv" required>
+      <button type="submit">Upload static data</button>
+    </form>
+
+    <form class="form card inner" action="{{ url_for('upload_surveys') }}" method="post" enctype="multipart/form-data">
+      <h3>Upload monthly surveys CSV</h3>
+      <input type="file" name="survey_file" accept=".csv" required>
+      <button type="submit">Upload surveys</button>
+    </form>
+  </div>
+
+  <form action="{{ url_for('retrain') }}" method="post" style="margin-top: 16px;">
+    <button type="submit">Retrain model now</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Latest ranking preview</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>College</th><th>State</th><th>Score</th><th>Category</th><th>Overall Rank</th><th>State Rank</th></tr>
+      </thead>
+      <tbody>
+        {% for row in preview %}
+        <tr>
+          <td>{{ row.college_name }}</td>
+          <td>{{ row.state }}</td>
+          <td>{{ "%.2f"|format(row.predicted_score) }}</td>
+          <td>{{ row.category }}</td>
+          <td>{{ row.overall_rank }}</td>
+          <td>{{ row.state_rank }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
