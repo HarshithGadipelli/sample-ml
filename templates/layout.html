@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,8 +8,8 @@
   <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
 </head>
 <body>
-  <div class="bg-blur bg-1"></div>
-  <div class="bg-blur bg-2"></div>
+  <div class="ambient-element amb-1"></div>
+  <div class="ambient-element amb-2"></div>
   <header class="topbar">
     <div>
       <div class="brand">College Rank Intelligence</div>
@@ -19,6 +18,8 @@
     <nav class="nav">
       <a href="{{ url_for('index') }}">Home</a>
       <a href="{{ url_for('admin') }}">Admin</a>
+      <a href="{{ url_for('college_portal') }}">College Portal</a>
+      <a href="{{ url_for('student_review') }}">Student Review</a>
     </nav>
   </header>
 

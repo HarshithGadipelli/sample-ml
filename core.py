@@ -216,6 +216,41 @@ def load_static_colleges(path: Path | None = None) -> pd.DataFrame:
         "naac_cgpa": 2.5,
         "nba_score": 50.0,
         "overall_base_score": 60.0,
+        # New detailed sub-attributes
+        "class_size": 60.0,
+        "attention_score": 70.0,
+        "teaching_pace": 75.0,
+        "doubt_solving_rate": 70.0,
+        "teacher_responsiveness": 70.0,
+        "lecture_prac_ratio": 50.0,
+        "freedom_vs_pressure": 70.0,
+        "mental_health": 70.0,
+        "anti_ragging": 95.0,
+        "complaint_time": 70.0,
+        "hostel_quality": 70.0,
+        "canteen_hygiene": 70.0,
+        "disabled_accessibility": 70.0,
+        "first_gen_inclusion": 80.0,
+        "syllabus_update": 70.0,
+        "industry_projects": 70.0,
+        "interdisciplinary": 70.0,
+        "peer_learning": 70.0,
+        "research_papers": 70.0,
+        "innovation_hackathons": 70.0,
+        "placement_rate": 70.0,
+        "internship_rate": 70.0,
+        "startup_creation": 5.0,
+        "higher_studies": 15.0,
+        "alumni_success": 70.0,
+        "salary_dist": 70.0,
+        "dropout_rate": 2.0,
+        "pass_rate_trend": 80.0,
+        "data_completeness": 98.0,
+        "audit_confidence": 70.0,
+        "response_consistency": 90.0,
+        "anomaly_flags": 1.0,
+        "evidence_verification": 70.0,
+        "bias_detection": 95.0,
     }
     for col, default in defaults.items():
         if col not in df.columns:
@@ -229,26 +264,23 @@ def load_static_colleges(path: Path | None = None) -> pd.DataFrame:
     df["peer_group"] = df["peer_group"].astype(str)
     df["is_college"] = coerce_bool(df["is_college"])
 
-    for c in [
-        "campus_area_acres",
-        "greenery_score",
-        "classroom_score",
-        "labs_score",
-        "library_score",
-        "internet_score",
-        "hostel_score",
-        "sports_score",
-        "faculty_score",
-        "practical_score",
-        "mentoring_score",
-        "placements_score",
-        "research_score",
-        "values_score",
-        "nirf_score",
-        "naac_cgpa",
-        "nba_score",
-        "overall_base_score",
-    ]:
+    numeric_cols = [
+        "campus_area_acres", "greenery_score", "classroom_score", "labs_score",
+        "library_score", "internet_score", "hostel_score", "sports_score",
+        "faculty_score", "practical_score", "mentoring_score", "placements_score",
+        "research_score", "values_score", "nirf_score", "naac_cgpa", "nba_score",
+        "overall_base_score", "class_size", "attention_score", "teaching_pace",
+        "doubt_solving_rate", "teacher_responsiveness", "lecture_prac_ratio",
+        "freedom_vs_pressure", "mental_health", "anti_ragging", "complaint_time",
+        "hostel_quality", "canteen_hygiene", "disabled_accessibility",
+        "first_gen_inclusion", "syllabus_update", "industry_projects",
+        "interdisciplinary", "peer_learning", "research_papers", "innovation_hackathons",
+        "placement_rate", "internship_rate", "startup_creation", "higher_studies",
+        "alumni_success", "salary_dist", "dropout_rate", "pass_rate_trend",
+        "data_completeness", "audit_confidence", "response_consistency",
+        "anomaly_flags", "evidence_verification", "bias_detection"
+    ]
+    for c in numeric_cols:
         df[c] = safe_numeric(df[c], default=60.0 if c != "naac_cgpa" else 2.5)
 
     return df
@@ -333,6 +365,27 @@ def aggregate_surveys(surveys: pd.DataFrame) -> pd.DataFrame:
 
 def compute_derived_scores(frame: pd.DataFrame) -> pd.DataFrame:
     df = frame.copy()
+
+    # Safely convert all used features to numeric, preventing concatenation of strings
+    score_cols = [
+        "classroom_score", "labs_score", "library_score", "internet_score", "hostel_score", 
+        "sports_score", "greenery_score", "faculty_score", "practical_score", "mentoring_score",
+        "placements_score", "research_score", "values_score", "nirf_score", "nba_score",
+        "survey_learning_env", "survey_student_life", "survey_academic_quality", 
+        "survey_outcomes", "survey_trust"
+    ]
+    for col in score_cols:
+        if col not in df.columns:
+            df[col] = 70.0 if col != "nirf_score" and col != "nba_score" else 50.0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(70.0 if col != "nirf_score" and col != "nba_score" else 50.0)
+    
+    if "naac_cgpa" not in df.columns:
+        df["naac_cgpa"] = 2.5
+    df["naac_cgpa"] = pd.to_numeric(df["naac_cgpa"], errors="coerce").fillna(2.5)
+    
+    if "genuine_ratio" not in df.columns:
+        df["genuine_ratio"] = 0.5
+    df["genuine_ratio"] = pd.to_numeric(df["genuine_ratio"], errors="coerce").fillna(0.5)
 
     # Core sub-scores
     df["infrastructure_score"] = (
@@ -603,6 +656,8 @@ def _completed_feature_frame(input_df: pd.DataFrame, artifacts: Dict) -> pd.Data
     for col in NUMERIC_FEATURES:
         if col not in df.columns:
             df[col] = defaults.get(col, 0.0)
+        else:
+            df[col] = safe_numeric(df[col], defaults.get(col, 0.0))
 
     for col in CATEGORICAL_FEATURES:
         if col not in df.columns:
@@ -752,7 +807,6 @@ def build_result_payload(row: Dict, bundle: Dict, existing_rank_df: Optional[pd.
         if "college_id" not in row or not row.get("college_id"):
             row["college_id"] = f"NEW-{abs(hash(row.get('college_name','new'))) % 10**8}"
         new_row = pd.DataFrame([row])
-        new_row = compute_derived_scores(new_row)
         new_row["predicted_score"] = float(row["final_score"])
         new_row["category"] = category_from_score(float(row["final_score"]))
         new_row["overall_rank"] = np.nan
@@ -795,24 +849,88 @@ def build_result_payload(row: Dict, bundle: Dict, existing_rank_df: Optional[pd.
         "remarks": remarks,
         "suggestions": tips,
         "rank_1_benchmark": benchmark,
+        
+        # New detailed sub-attributes for the UI
+        "class_size": float(row.get("class_size", 60.0)),
+        "attention_score": float(row.get("attention_score", 70.0)),
+        "teaching_pace": float(row.get("teaching_pace", 75.0)),
+        "doubt_solving_rate": float(row.get("doubt_solving_rate", 70.0)),
+        "teacher_responsiveness": float(row.get("teacher_responsiveness", 70.0)),
+        "lecture_prac_ratio": float(row.get("lecture_prac_ratio", 50.0)),
+        "freedom_vs_pressure": float(row.get("freedom_vs_pressure", 70.0)),
+        "mental_health": float(row.get("mental_health", 70.0)),
+        "anti_ragging": float(row.get("anti_ragging", 95.0)),
+        "complaint_time": float(row.get("complaint_time", 70.0)),
+        "canteen_hygiene": float(row.get("canteen_hygiene", 70.0)),
+        "disabled_accessibility": float(row.get("disabled_accessibility", 70.0)),
+        "first_gen_inclusion": float(row.get("first_gen_inclusion", 80.0)),
+        "syllabus_update": float(row.get("syllabus_update", 70.0)),
+        "industry_projects": float(row.get("industry_projects", 70.0)),
+        "interdisciplinary": float(row.get("interdisciplinary", 70.0)),
+        "peer_learning": float(row.get("peer_learning", 70.0)),
+        "research_papers": float(row.get("research_papers", 70.0)),
+        "innovation_hackathons": float(row.get("innovation_hackathons", 70.0)),
+        "placement_rate": float(row.get("placement_rate", 70.0)),
+        "internship_rate": float(row.get("internship_rate", 70.0)),
+        "startup_creation": float(row.get("startup_creation", 5.0)),
+        "higher_studies": float(row.get("higher_studies", 15.0)),
+        "alumni_success": float(row.get("alumni_success", 70.0)),
+        "salary_dist": float(row.get("salary_dist", 70.0)),
+        "dropout_rate": float(row.get("dropout_rate", 2.0)),
+        "pass_rate_trend": float(row.get("pass_rate_trend", 80.0)),
+        "data_completeness": float(row.get("data_completeness", 98.0)),
+        "audit_confidence": float(row.get("audit_confidence", 70.0)),
+        "response_consistency": float(row.get("response_consistency", 90.0)),
+        "anomaly_flags": float(row.get("anomaly_flags", 1.0)),
+        "evidence_verification": float(row.get("evidence_verification", 70.0)),
+        "bias_detection": float(row.get("bias_detection", 95.0)),
     }
 
 
 def fuzzy_find_college(name: str, static_df: pd.DataFrame) -> Optional[pd.Series]:
+    import re
     name = str(name).strip().lower()
     if not name:
         return None
+        
+    # Replace aliases
+    name = re.sub(r'\btg\b', 'telangana', name)
+    
+    # 1. Exact match
     exact = static_df[static_df["college_name"].str.lower() == name]
     if not exact.empty:
         return exact.iloc[0]
-    matches = get_close_matches(name, static_df["college_name"].astype(str).str.lower().tolist(), n=1, cutoff=0.55)
-    if not matches:
-        return None
-    match_name = matches[0]
-    found = static_df[static_df["college_name"].str.lower() == match_name]
-    if found.empty:
-        return None
-    return found.iloc[0]
+        
+    # 2. Substring match (e.g., searching "JNTUH" finds "Jawaharlal Nehru Technological University (JNTUH)")
+    substring_matches = static_df[static_df["college_name"].str.lower().str.contains(name, regex=False)]
+    if not substring_matches.empty:
+        # Return the shortest name that contains the substring to avoid returning overly generic matches first
+        idx = substring_matches["college_name"].str.len().idxmin()
+        return static_df.loc[idx]
+        
+    # 3. Word intersection match (e.g., "mvsr engineering" matches "Maturi Venkata Subba Rao (MVSR) Engineering College")
+    search_words = set(name.split())
+    def match_score(college_name: str) -> int:
+        c_words = set(str(college_name).lower().replace("(", " ").replace(")", " ").split())
+        return len(search_words.intersection(c_words))
+        
+    scores = static_df["college_name"].apply(match_score)
+    max_score = scores.max()
+    if max_score > 0:
+        best_idx = scores.idxmax()
+        # Only return if at least a significant part matched, or if there's a strong tie-breaker
+        if max_score >= min(len(search_words), 2):
+            return static_df.loc[best_idx]
+            
+    # 4. Fallback to difflib
+    matches = get_close_matches(name, static_df["college_name"].astype(str).str.lower().tolist(), n=1, cutoff=0.5)
+    if matches:
+        match_name = matches[0]
+        found = static_df[static_df["college_name"].str.lower() == match_name]
+        if not found.empty:
+            return found.iloc[0]
+            
+    return None
 
 
 def load_existing_ranking(bundle: Dict) -> pd.DataFrame:
@@ -886,4 +1004,304 @@ def ensure_schema_for_new_input(input_data: Dict) -> Dict:
     }
     for key, val in defaults.items():
         out.setdefault(key, val)
+    return out
+
+
+def add_new_college_to_csv(row: Dict) -> bool:
+    """
+    Appends the predicted new college to static_colleges.csv and its survey details to monthly_surveys.csv
+    if it doesn't already exist.
+    Returns True if added, False if it already existed.
+    """
+    static_df = load_static_colleges()
+    college_name = str(row.get("college_name", "")).strip()
+    college_id = str(row.get("college_id", "")).strip()
+
+    # Check case-insensitive name match or exact ID match
+    name_exists = not static_df[static_df["college_name"].str.lower() == college_name.lower()].empty
+    id_exists = not static_df[static_df["college_id"].astype(str) == college_id].empty
+
+    if name_exists or id_exists:
+        return False
+
+    # 1. Prepare static college row
+    static_cols = [
+        "college_id", "college_name", "state", "district", "college_type", "peer_group",
+        "is_college", "campus_area_acres", "greenery_score", "classroom_score", "labs_score",
+        "library_score", "internet_score", "hostel_score", "sports_score", "faculty_score",
+        "practical_score", "mentoring_score", "placements_score", "research_score", "values_score",
+        "nirf_score", "naac_cgpa", "nba_score", "overall_base_score",
+        
+        # New detailed sub-attributes
+        "class_size", "attention_score", "teaching_pace", "doubt_solving_rate",
+        "teacher_responsiveness", "lecture_prac_ratio", "freedom_vs_pressure",
+        "mental_health", "anti_ragging", "complaint_time", "hostel_quality",
+        "canteen_hygiene", "disabled_accessibility", "first_gen_inclusion",
+        "syllabus_update", "industry_projects", "interdisciplinary",
+        "peer_learning", "research_papers", "innovation_hackathons",
+        "placement_rate", "internship_rate", "startup_creation", "higher_studies",
+        "alumni_success", "salary_dist", "dropout_rate", "pass_rate_trend",
+        "data_completeness", "audit_confidence", "response_consistency",
+        "anomaly_flags", "evidence_verification", "bias_detection"
+    ]
+    
+    new_static = {}
+    for col in static_cols:
+        if col == "overall_base_score":
+            new_static[col] = float(row.get("final_score", 60.0))
+        elif col == "is_college":
+            new_static[col] = True
+        else:
+            val = row.get(col)
+            if val is None or val == "":
+                new_static[col] = static_df[col].iloc[0] if col in static_df.columns else 70.0
+            else:
+                new_static[col] = val
+
+    new_static_df = pd.DataFrame([new_static])
+    updated_static = pd.concat([static_df, new_static_df], ignore_index=True)
+    updated_static.to_csv(STATIC_PATH, index=False)
+
+    # 2. Prepare survey rows
+    survey_df = load_surveys()
+    
+    survey_learning_env = float(row.get("survey_learning_env", 70.0))
+    survey_student_life = float(row.get("survey_student_life", 70.0))
+    survey_academic_quality = float(row.get("survey_academic_quality", 70.0))
+    survey_outcomes = float(row.get("survey_outcomes", 70.0))
+    survey_trust = float(row.get("survey_trust", 70.0))
+    
+    genuine_ratio = float(row.get("genuine_ratio", 0.5))
+    
+    new_surveys = []
+    # Create 6 rows (one for each month)
+    for m in range(1, 7):
+        is_verified = (m % 2 == 0) if genuine_ratio > 0 else False
+        new_surveys.append({
+            "survey_id": f"{college_id}-SEM1-{m:02d}",
+            "college_id": college_id,
+            "semester_id": 1,
+            "month_no": m,
+            "student_id": f"{college_id}-S{m:02d}",
+            "attendance_pct": 85.0 if is_verified else 65.0,
+            "marks_pct": 75.0 if is_verified else 45.0,
+            "verified_student": is_verified,
+            "learning_env": survey_learning_env,
+            "student_life": survey_student_life,
+            "academic_quality": survey_academic_quality,
+            "outcomes": survey_outcomes,
+            "trust": survey_trust,
+            "comment": "New college predicted survey entry"
+        })
+    
+    new_surveys_df = pd.DataFrame(new_surveys)
+    updated_surveys = pd.concat([survey_df, new_surveys_df], ignore_index=True)
+    updated_surveys.to_csv(SURVEY_PATH, index=False)
+    
+    return True
+
+
+def is_school_name(name: str) -> bool:
+    import re
+    name_lower = name.lower().strip()
+    school_keywords = [
+        r"\bschool\b", r"\bhigh\s*school\b", r"\bvidyalaya\b", r"\bpathshala\b", 
+        r"\bprimary\b", r"\bsecondary\b", r"\bk-12\b", r"\bkindergarten\b", 
+        r"\bplay\s*school\b", r"\bpreschool\b", r"\bjunior\s*college\b"
+    ]
+    for pattern in school_keywords:
+        if re.search(pattern, name_lower):
+            return True
+    return False
+
+
+def map_detailed_inputs_to_features(form_dict: Dict) -> Dict:
+    out = {}
+    is_quick = form_dict.get("mode") == "quick"
+    
+    if is_quick:
+        # Quick Mode: direct mapping of the high-level inputs
+        out["classroom_score"] = float(form_dict.get("classroom_score", 70.0))
+        out["labs_score"] = float(form_dict.get("labs_score", 70.0))
+        out["library_score"] = float(form_dict.get("library_score", 70.0))
+        out["internet_score"] = float(form_dict.get("internet_score", 70.0))
+        out["hostel_score"] = float(form_dict.get("hostel_score", 70.0))
+        out["sports_score"] = float(form_dict.get("sports_score", 70.0))
+        out["faculty_score"] = float(form_dict.get("faculty_score", 70.0))
+        out["practical_score"] = float(form_dict.get("practical_score", 70.0))
+        out["mentoring_score"] = float(form_dict.get("mentoring_score", 70.0))
+        out["placements_score"] = float(form_dict.get("placements_score", 70.0))
+        out["research_score"] = float(form_dict.get("research_score", 70.0))
+        out["values_score"] = float(form_dict.get("values_score", 70.0))
+        out["greenery_score"] = float(form_dict.get("greenery_score", 70.0))
+        
+        out["nirf_score"] = float(form_dict.get("nirf_score", 50.0))
+        out["naac_cgpa"] = float(form_dict.get("naac_cgpa", 2.5))
+        out["nba_score"] = float(form_dict.get("nba_score", 50.0))
+        
+        out["survey_learning_env"] = float(form_dict.get("survey_learning_env", 70.0))
+        out["survey_student_life"] = float(form_dict.get("survey_student_life", 70.0))
+        out["survey_academic_quality"] = float(form_dict.get("survey_academic_quality", 70.0))
+        out["survey_outcomes"] = float(form_dict.get("survey_outcomes", 70.0))
+        out["survey_trust"] = float(form_dict.get("survey_trust", 70.0))
+        out["genuine_ratio"] = float(form_dict.get("genuine_ratio", 0.5))
+        
+        out["survey_count"] = int(float(form_dict.get("survey_count", 15.0)))
+        out["trusted_survey_count"] = int(float(form_dict.get("trusted_survey_count", 10.0)))
+        out["survey_months"] = int(float(form_dict.get("survey_months", 6.0)))
+        
+        # Sub-attributes mapping to defaults
+        out["class_size"] = 60.0
+        out["attention_score"] = out["survey_learning_env"]
+        out["teaching_pace"] = 75.0
+        out["doubt_solving_rate"] = out["survey_learning_env"]
+        out["teacher_responsiveness"] = out["survey_learning_env"]
+        out["lecture_prac_ratio"] = 50.0
+        out["freedom_vs_pressure"] = 70.0
+        
+        out["mental_health"] = out["survey_student_life"]
+        out["anti_ragging"] = 95.0
+        out["complaint_time"] = out["survey_student_life"]
+        out["hostel_quality"] = out["hostel_score"]
+        out["canteen_hygiene"] = out["survey_student_life"]
+        out["disabled_accessibility"] = 70.0
+        out["first_gen_inclusion"] = 80.0
+        
+        out["syllabus_update"] = out["survey_academic_quality"]
+        out["industry_projects"] = out["survey_academic_quality"]
+        out["interdisciplinary"] = out["survey_academic_quality"]
+        out["peer_learning"] = out["survey_academic_quality"]
+        out["research_papers"] = out["research_score"]
+        out["innovation_hackathons"] = out["research_score"]
+        
+        out["placement_rate"] = out["placements_score"]
+        out["internship_rate"] = out["placements_score"]
+        out["startup_creation"] = out["research_score"] / 10.0
+        out["higher_studies"] = 15.0
+        out["alumni_success"] = out["placements_score"]
+        out["salary_dist"] = out["placements_score"]
+        out["dropout_rate"] = 2.0
+        out["pass_rate_trend"] = 80.0
+        
+        out["data_completeness"] = 98.0
+        out["audit_confidence"] = out["survey_trust"]
+        out["response_consistency"] = 90.0
+        out["anomaly_flags"] = 1.0
+        out["evidence_verification"] = out["survey_trust"]
+        out["bias_detection"] = 95.0
+    else:
+        # Detailed Mode: Aggregate granular fields to standard core features
+        seating_chairs = float(form_dict.get("seating_chairs", 70.0))
+        black_digital_boards = float(form_dict.get("black_digital_boards", 70.0))
+        ventilation_fans = float(form_dict.get("ventilation_fans", 70.0))
+        classroom_occupancy = float(form_dict.get("classroom_occupancy", 80.0))
+        
+        labs_quality = float(form_dict.get("labs_quality", 70.0))
+        internet_quality = float(form_dict.get("internet_quality", 70.0))
+        trees_and_nature = float(form_dict.get("trees_and_nature", 70.0))
+        
+        faculty_interactive_ability = float(form_dict.get("faculty_interactive_ability", 70.0))
+        practical_sessions = float(form_dict.get("practical_sessions", 70.0))
+        interactive_sessions = float(form_dict.get("interactive_sessions", 70.0))
+        exam_practical_focus = float(form_dict.get("exam_practical_focus", 70.0))
+        strictness_level = float(form_dict.get("strictness_level", 50.0))
+        
+        student_mentoring = float(form_dict.get("student_mentoring", 70.0))
+        projects_innovation = float(form_dict.get("projects_innovation", 70.0))
+        
+        placement_rate = float(form_dict.get("placement_rate", 70.0))
+        internship_rate = float(form_dict.get("internship_rate", 70.0))
+        salary_dist = float(form_dict.get("salary_dist", 70.0))
+        
+        research_papers = float(form_dict.get("research_papers", 70.0))
+        startup_creation = float(form_dict.get("startup_creation", 5.0))
+        
+        indian_constitution_values = float(form_dict.get("indian_constitution_values", 70.0))
+        syllabus_relevance = float(form_dict.get("syllabus_relevance", 70.0))
+        
+        sports_library_sessions = float(form_dict.get("sports_library_sessions", 70.0))
+        hostel_quality = float(form_dict.get("hostel_quality", 70.0))
+        
+        # Mapping aggregates
+        def clamp(val, min_v=0.0, max_v=100.0): return max(min_v, min(max_v, val))
+        out["classroom_score"] = clamp((seating_chairs + black_digital_boards + ventilation_fans + (100.0 - abs(classroom_occupancy - 80.0) * 2.0)) / 4.0)
+        out["labs_score"] = labs_quality
+        out["library_score"] = sports_library_sessions
+        out["internet_score"] = internet_quality
+        out["hostel_score"] = hostel_quality
+        out["sports_score"] = sports_library_sessions
+        out["faculty_score"] = faculty_interactive_ability
+        out["practical_score"] = clamp((practical_sessions + exam_practical_focus) / 2.0)
+        out["mentoring_score"] = student_mentoring
+        out["placements_score"] = clamp((placement_rate + internship_rate + salary_dist) / 3.0)
+        out["research_score"] = clamp((projects_innovation + research_papers + startup_creation * 4.0) / 6.0)
+        out["values_score"] = clamp((indian_constitution_values + syllabus_relevance) / 2.0)
+        out["greenery_score"] = trees_and_nature
+        
+        out["nirf_score"] = float(form_dict.get("nirf_score", 50.0))
+        out["naac_cgpa"] = float(form_dict.get("naac_cgpa", 2.5))
+        out["nba_score"] = float(form_dict.get("nba_score", 50.0))
+        
+        # Write sub-attributes directly
+        out["class_size"] = float(form_dict.get("class_size", 60.0))
+        out["attention_score"] = float(form_dict.get("attention_score", 70.0))
+        out["teaching_pace"] = float(form_dict.get("teaching_pace", 75.0))
+        out["doubt_solving_rate"] = float(form_dict.get("doubt_solving_rate", 70.0))
+        out["teacher_responsiveness"] = float(form_dict.get("teacher_responsiveness", 70.0))
+        out["lecture_prac_ratio"] = float(form_dict.get("lecture_prac_ratio", 50.0))
+        out["freedom_vs_pressure"] = float(form_dict.get("freedom_vs_pressure", 70.0))
+        
+        out["mental_health"] = float(form_dict.get("mental_health", 70.0))
+        out["anti_ragging"] = float(form_dict.get("anti_ragging", 95.0))
+        out["complaint_time"] = float(form_dict.get("complaint_time", 70.0))
+        out["hostel_quality"] = hostel_quality
+        out["canteen_hygiene"] = float(form_dict.get("canteen_hygiene", 70.0))
+        out["disabled_accessibility"] = float(form_dict.get("disabled_accessibility", 70.0))
+        out["first_gen_inclusion"] = float(form_dict.get("first_gen_inclusion", 80.0))
+        
+        out["syllabus_update"] = float(form_dict.get("syllabus_update", 70.0))
+        out["industry_projects"] = float(form_dict.get("industry_projects", 70.0))
+        out["interdisciplinary"] = float(form_dict.get("interdisciplinary", 70.0))
+        out["peer_learning"] = float(form_dict.get("peer_learning", 70.0))
+        out["research_papers"] = research_papers
+        out["innovation_hackathons"] = float(form_dict.get("innovation_hackathons", 70.0))
+        
+        out["placement_rate"] = placement_rate
+        out["internship_rate"] = internship_rate
+        out["startup_creation"] = startup_creation
+        out["higher_studies"] = float(form_dict.get("higher_studies", 15.0))
+        out["alumni_success"] = float(form_dict.get("alumni_success", 70.0))
+        out["salary_dist"] = salary_dist
+        out["dropout_rate"] = float(form_dict.get("dropout_rate", 2.0))
+        out["pass_rate_trend"] = float(form_dict.get("pass_rate_trend", 80.0))
+        
+        out["data_completeness"] = float(form_dict.get("data_completeness", 98.0))
+        out["audit_confidence"] = float(form_dict.get("audit_confidence", 70.0))
+        out["response_consistency"] = float(form_dict.get("response_consistency", 90.0))
+        out["anomaly_flags"] = float(form_dict.get("anomaly_flags", 1.0))
+        out["evidence_verification"] = float(form_dict.get("evidence_verification", 70.0))
+        out["bias_detection"] = float(form_dict.get("bias_detection", 95.0))
+        
+        # Compute Surveys
+        out["survey_learning_env"] = clamp((out["attention_score"] + out["doubt_solving_rate"] + out["teacher_responsiveness"]) / 3.0)
+        out["survey_student_life"] = clamp((out["mental_health"] + out["anti_ragging"] + out["canteen_hygiene"] + out["disabled_accessibility"]) / 4.0)
+        out["survey_academic_quality"] = clamp((out["syllabus_update"] + out["industry_projects"] + out["interdisciplinary"] + out["peer_learning"]) / 4.0)
+        out["survey_outcomes"] = clamp((out["placement_rate"] + float(form_dict.get("career_guidance", 70.0))) / 2.0)
+        out["survey_trust"] = clamp((out["data_completeness"] + out["audit_confidence"] + out["response_consistency"] + out["bias_detection"]) / 4.0)
+        out["genuine_ratio"] = clamp(out["response_consistency"] / 100.0, 0.0, 1.0)
+        
+        out["survey_count"] = int(float(form_dict.get("survey_count", 15.0)))
+        out["trusted_survey_count"] = int(float(form_dict.get("trusted_survey_count", 10.0)))
+        out["survey_months"] = int(float(form_dict.get("survey_months", 6.0)))
+
+    # Basic keys
+    out["college_name"] = str(form_dict.get("college_name", "")).strip()
+    out["state"] = str(form_dict.get("state", "Telangana")).strip()
+    out["district"] = str(form_dict.get("district", "Unknown")).strip()
+    out["college_type"] = str(form_dict.get("college_type", "Degree")).strip()
+    out["peer_group"] = str(form_dict.get("peer_group", out["college_type"])).strip()
+    out["college_id"] = str(form_dict.get("college_id", "")).strip() or f"NEW-{abs(hash(out['college_name'])) % 10**8}"
+    out["campus_area_acres"] = float(form_dict.get("campus_area_acres", 10.0))
+    out["is_college"] = True
+    
     return out

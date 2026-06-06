@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="hero card" style="margin-bottom: 24px;">
+  <div class="hero-copy">
+    <h1>📝 Student Review Portal</h1>
+    <p>Submit your genuine semester feedback to help improve your college's ranking and transparency. Join thousands of students rating Telangana's top 500 colleges.</p>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Semester Feedback</h2>
+  <form action="{{ url_for('submit_student_review') }}" method="post" class="form form-grid">
+    <label>🎓 College Name</label>
+    <input type="text" name="college_name" placeholder="Search your college name..." required>
+
+    <label>📅 Semester (1 to 8)</label>
+    <select name="semester_id" required>
+      <option value="1">1st Semester</option>
+      <option value="2">2nd Semester</option>
+      <option value="3">3rd Semester</option>
+      <option value="4">4th Semester</option>
+      <option value="5">5th Semester</option>
+      <option value="6">6th Semester</option>
+      <option value="7">7th Semester</option>
+      <option value="8">8th Semester</option>
+    </select>
+
+    <label>🆔 Student ID / Roll No</label>
+    <input type="text" name="student_id" placeholder="For verification (kept private)" required>
+
+    <label>🕒 Your Attendance (%)</label>
+    <input type="number" step="1" name="attendance_pct" min="0" max="100" value="75">
+
+    <label>💯 Average Marks (%)</label>
+    <input type="number" step="1" name="marks_pct" min="0" max="100" value="65">
+
+    <h3 style="grid-column: span 2; margin-top: 20px; border-bottom: 1px solid var(--line); padding-bottom: 8px; color: #1e5a32;">Rate Your Experience</h3>
+
+    <label>🏫 Learning Environment (0-100)</label>
+    <input type="number" step="1" name="learning_env" min="0" max="100" value="70">
+
+    <label>🌿 Student Life & Well-being (0-100)</label>
+    <input type="number" step="1" name="student_life" min="0" max="100" value="70">
+
+    <label>📖 Academic Quality & Syllabus (0-100)</label>
+    <input type="number" step="1" name="academic_quality" min="0" max="100" value="70">
+
+    <label>🚀 Career & Outcomes Support (0-100)</label>
+    <input type="number" step="1" name="outcomes" min="0" max="100" value="70">
+
+    <label>🤝 Integrity & Trust (0-100)</label>
+    <input type="number" step="1" name="trust" min="0" max="100" value="70">
+
+    <label style="grid-column: span 2;">💬 Additional Comments</label>
+    <textarea name="comment" rows="3" placeholder="Describe the practical sessions, teaching pace, or any suggestions..." style="grid-column: span 2; border:1px solid rgba(207, 224, 209, 0.8); background: rgba(255, 255, 255, 0.9); border-radius:16px; padding:14px 16px; outline:none; font-family:inherit; transition: all 0.2s ease;"></textarea>
+
+    <button type="submit" style="grid-column: span 2; margin-top: 16px; font-size: 18px; padding: 18px;">Submit Review ✨</button>
+  </form>
+</section>
+{% endblock %}
